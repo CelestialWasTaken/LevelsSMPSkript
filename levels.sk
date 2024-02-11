@@ -1,0 +1,97 @@
+set {_ls1} to paper with custom model data 1 named "&d<bold><italic>XP Multiplier"
+set {_ls2} to paper with custom model data 2 named "&d<bold><italic>Totem Of Experience"
+
+register new shaped recipe for {_ls1} using experience bottle, netherite ingot, experience bottle, wither skeleton skull, totem of undying, wither skeleton skull, experience bottle, netherite ingot, and experience bottle with id "xp_multiplier" in group "multiplier"
+register new shaped recipe for {_ls2} using netherite ingot, {_ls1}, netherite ingot, {_ls1}, totem of undying, {_ls1}, netherite ingot, {_ls1}, and netherite ingot with id "revive_totem" in group "revive"
+
+on level change:
+  loop 1 to 10:
+    if player's level is between (loop-value - 1) * 20 and loop-value * 20:
+      set player's max health to loop-value + 9
+      stop
+
+on level progress change:
+  set {_xp.%player%} to event-experience
+  if {multipliers.%player%} < 10:
+    remove {_xp.%player%} from player
+    set {_xp.%player%} to rounded {_xp.%player%} / 2
+    add {_xp.%player%} to player
+    stop
+  loop 1 to {multipliers.%player%}:
+    add {_xp.%player%} to player
+
+every 1 tick:
+  loop all players:
+    send action bar "&fXP Multiplier: &a" + ({multipliers.%loop-player%} / 10) + "x" to loop-player
+
+on join:
+  if {multipliers.%player%} is not set or {multipliers.%player%} is 0:
+    set {multipliers.%player%} to 10
+  execute console command "/recipe give %player% skbee:xp_multiplier"
+  execute console command "/recipe give %player% skbee:revive_totem"
+
+on right click:
+  if name of player's held item is "&d<bold><italic>XP Multiplier":
+    if {multipliers.%player%} < 18:
+      remove 1 paper with custom model data 1 from player
+      add 1 to {multipliers.%player%}
+      send "&6Your multiplier has increased!" to player
+
+command /withdrawmultiplier:
+  trigger:
+    if {multipliers.%player%} > 1:
+      remove 1 from {multipliers.%player%}
+      give player paper with custom model data 1 named "&d<bold><italic>XP Multiplier"
+      send "&6&lYou just withdrew 1 multiplier!" to player
+
+command /setmultipliers <player> <integer>:
+  permission: op
+  trigger:
+    if arg-1 is set and arg-2 is a number:
+      set {multipliers.%arg-1%} to arg-2
+
+command /levelsgive <text>:
+  permission: op
+  trigger:
+    if arg-1 is "multiplier":
+      give player 64 paper with custom model data 1 named "&d<bold><italic>XP Multiplier"
+    if arg-1 is "totem of experience":
+      give player 64 paper with custom model data 1 named "&d<bold><italic>Totem Of Experience"
+
+command /revive:
+  permission: op
+  trigger:
+    set {_Levels.BannedPlayers.GUI} to a new chest inventory with 6 row with name "&6&lChoose Who To Revive!"
+    set {_s} to 0
+    loop {Levels.BannedPlayers::*}:
+      set {_p} to loop-value parsed as offline player
+      add {_s::*} to {1, 2, 4, 6, 7, 10, 10, 11, 13, 15, 16, 19, 19, 20, 22, 24, 25, 28, 28, 29, 31, 33, 34, 37, 37, 38, 40, 42, 43, 46, 47, 49, 51, 52, 55}
+      while {_s::*} contains {_s}:
+        add 1 to {_s}
+      set slot {_s} of {_Levels.BannedPlayers.GUI} to {_p}'s skull named "&f%{_p}%"
+      add 1 to {_s}
+    open {_Levels.BannedPlayers.GUI} to player
+
+on inventory click:
+  if event-item is a player head:
+    if name of player's inventory is "&6&lChoose Who To Revive!":
+      set {_pn} to name of event-item without color codes
+      set {_pl} to "%{_pn}%" parsed as offline player
+      set {multipliers.%{_pn}%} to 2
+      unban {_pl}
+      send "&6&l%{_pn}% has been revived!" to player
+      broadcast "&6&l%{_pn}% has just been revived!"
+      remove {_pl} from {Levels.BannedPlayers::*}
+
+command /givemultiplier <player>:
+  trigger:
+    if {multipliers.%player%} > 1 and {multipliers.%arg-1%} < 18:
+      add 1 to {multipliers.%arg-1%}
+      remove 1 from {multipliers.%player%}
+      send "&6&lYou gave 1 multiplier to %arg-1%!" to player
+      send "&6&l%player% gave you 1 multiplier!" to arg-1
+
+command /clearbanned:
+  permission: op
+  trigger:
+    clear {Levels.BannedPlayers::*}
